@@ -3,7 +3,7 @@ Streamlit Pay Equity Regression App
 ==================================
 Single-file Streamlit app that lets Rewards / HR analysts:
  - Upload their employee compensation CSV (or use sample data)
- - Select dependent variable (e.g. BasePayUSD) and independent variables
+ - Select dependent variable (e.g. Salary) and independent variables
  - Run an OLS regression (statsmodels) and view coefficients, p-values, R-squared
  - See predicted vs actual scatter, residuals table, coefficient bar chart
  - Download employee-level predictions and coefficients
@@ -15,14 +15,6 @@ How to run
    pip install streamlit pandas numpy matplotlib statsmodels scikit-learn
 3. Run:
    streamlit run streamlit_pay_equity_app.py
-
-Notes
------
-- The app will automatically one-hot encode categorical variables using patsy's formula syntax
-  via `statsmodels.formula.api.ols` when you prefix variables with `C(...)` in the independent
-  variables input (UI helps with that). If you upload a file, columns that are non-numeric will
-  be offered as categorical variables.
-
 """
 
 import io
@@ -46,29 +38,28 @@ def load_sample_data() -> pd.DataFrame:
         'EmployeeID': [f'E{str(i).zfill(4)}' for i in range(1,101)],
         'Gender': np.random.choice(['Male','Female'], size=100, p=[0.55,0.45]),
         'JobLevel': np.random.choice([2,3,4,5,6], size=100, p=[0.1,0.25,0.35,0.2,0.1]),
-        'PerformanceRating': np.random.choice([1,2,3,4,5], size=100, p=[0.05,0.15,0.45,0.25,0.1]),
-        'TenureYears': np.round(np.random.exponential(scale=4, size=100)).astype(int),
-        'Function': np.random.choice(['Ops','Sales','Finance','HR','IT'], size=100),
-        'Location': np.random.choice(['UK','USA','SGP','UAE'], size=100, p=[0.4,0.35,0.15,0.1])
+        'Grouping': np.random.choice(['Ops','Sales','Finance','HR','IT'], size=100),
+        'ServiceYears': np.round(np.random.exponential(scale=5, size=100)).astype(int),
+        'TenureinRole': np.round(np.random.exponential(scale=2, size=100)).astype(int),
+        'Rating': np.random.choice([1,2,3,4,5], size=100, p=[0.05,0.15,0.45,0.25,0.1]),
+        'Salary': 0  # placeholder, will construct below
     }
     df = pd.DataFrame(d)
 
-    # Construct base pay from an additive model + noise
+    # Construct Salary from additive model + noise
     base = 30000
-    df['BasePayUSD'] = (
+    df['Salary'] = (
         base
         + df['JobLevel'] * 8000
-        + df['PerformanceRating'] * 1500
-        + df['TenureYears'] * 700
-        + df['Function'].map({'Ops':0,'Sales':4000,'Finance':2000,'HR':-500,'IT':1000})
-        + df['Location'].map({'UK':0,'USA':3000,'SGP':-2000,'UAE':1000})
+        + df['Rating'] * 1500
+        + df['ServiceYears'] * 700
+        + df['Grouping'].map({'Ops':0,'Sales':4000,'Finance':2000,'HR':-500,'IT':1000})
     )
-    # Introduce a small unexplained gender gap for demo purposes
-    df.loc[df['Gender']=='Female', 'BasePayUSD'] *= 0.97
-    # Add noise
-    df['BasePayUSD'] = (df['BasePayUSD'] + np.random.normal(scale=3000, size=len(df))).round(0)
-    return df
+    # Introduce a small unexplained gender gap for demo
+    df.loc[df['Gender']=='Female', 'Salary'] *= 0.97
+    df['Salary'] = (df['Salary'] + np.random.normal(scale=3000, size=len(df))).round(0)
 
+    return df
 
 def detect_column_types(df: pd.DataFrame) -> Tuple[List[str], List[str]]:
     """Return (numeric_cols, categorical_cols) for UI suggestions."""
@@ -76,20 +67,15 @@ def detect_column_types(df: pd.DataFrame) -> Tuple[List[str], List[str]]:
     categorical = [c for c in df.columns if c not in numeric]
     return numeric, categorical
 
-
 def build_formula(dep: str, indep: List[str]) -> str:
-    """Construct a formula string for statsmodels.
-    For categorical variables the UI will advise using C(var) if needed.
-    """
+    """Construct a formula string for statsmodels."""
     rhs = ' + '.join(indep) if indep else '1'
     return f"{dep} ~ {rhs}"
-
 
 def run_ols_formula(formula: str, df: pd.DataFrame):
     """Fit OLS using statsmodels and return the results object."""
     model = smf.ols(formula=formula, data=df).fit()
     return model
-
 
 def plot_coefficients(coeff_df: pd.DataFrame):
     """Bar chart of coefficients with error bars (2*std err)."""
@@ -103,7 +89,6 @@ def plot_coefficients(coeff_df: pd.DataFrame):
     plt.tight_layout()
     return fig
 
-
 def plot_predicted_vs_actual(df: pd.DataFrame, dep: str, pred_col: str = 'Predicted'):
     fig, ax = plt.subplots(figsize=(6,6))
     ax.scatter(df[pred_col], df[dep], alpha=0.7)
@@ -114,7 +99,6 @@ def plot_predicted_vs_actual(df: pd.DataFrame, dep: str, pred_col: str = 'Predic
     ax.set_title('Predicted vs Actual')
     plt.tight_layout()
     return fig
-
 
 def to_download_link(df: pd.DataFrame, filename: str, label: str = "Download CSV") -> str:
     csv = df.to_csv(index=False)
@@ -130,7 +114,7 @@ st.set_page_config(page_title="Rewards - Pay Equity Regression", layout='wide')
 st.title("Rewards — Pay Equity Regression Dashboard")
 st.markdown(
     "Upload a CSV with employee-level data or use the included sample dataset.\n"
-    "Select dependent variable (usually base pay or total cash) and explanatory variables."
+    "Select dependent variable (usually Salary) and explanatory variables."
 )
 
 # Sidebar controls
@@ -159,16 +143,15 @@ numeric_cols, categorical_cols = detect_column_types(raw_df)
 
 with st.sidebar.form('model_options'):
     st.header('Model configuration')
-    dep_var = st.selectbox('Dependent variable (target)', options=numeric_cols, index= numeric_cols.index('BasePayUSD') if 'BasePayUSD' in numeric_cols else 0)
+    dep_var = st.selectbox('Dependent variable (target)', options=numeric_cols, index= numeric_cols.index('Salary') if 'Salary' in numeric_cols else 0)
 
     st.markdown('**Choose independent variables (features)**')
-    default_indep = [c for c in ['JobLevel','PerformanceRating','TenureYears','Gender'] if c in raw_df.columns]
+    default_indep = [c for c in ['JobLevel','Gender','Grouping','ServiceYears','TenureinRole','Rating'] if c in raw_df.columns]
     indep_vars = st.multiselect('Independent variables', options=[*numeric_cols, *categorical_cols], default=default_indep)
 
-    st.markdown('''
-    If a variable is categorical (e.g. Gender, Function, Location), the app will automatically
-    treat it as categorical by wrapping it using `C(variable)` in the regression formula.
-    You can also manually edit the formula below before running.
+    st.markdown('''If a variable is categorical (e.g. Gender, Grouping), the app will automatically
+        treat it as categorical by wrapping it using `C(variable)` in the regression formula.
+        You can also manually edit the formula below before running.
     ''')
 
     # Build suggested formula automatically (wrap non-numeric indep in C())
@@ -180,7 +163,7 @@ with st.sidebar.form('model_options'):
             indep_for_formula.append(v)
 
     suggested_formula = build_formula(dep_var, indep_for_formula)
-    formula = st.text_input('Regression formula (editable)', value=suggested_formula, help='You can edit the formula, e.g. add interactions like C(Function):JobLevel')
+    formula = st.text_input('Regression formula (editable)', value=suggested_formula, help='You can edit the formula, e.g. add interactions like C(Grouping):JobLevel')
 
     test_size = st.slider('Test set size (%)', min_value=0, max_value=50, value=20, step=5)
     btn_run = st.form_submit_button('Run regression')
