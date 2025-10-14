@@ -20,7 +20,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # -------------------------
-# Brand colors (from V.Group website)
+# Brand colors (from V.Group)
 # -------------------------
 NAVY = "#002B45"
 TEAL = "#00A3E0"
@@ -87,10 +87,7 @@ def format_number(val):
 # App layout
 # -------------------------
 st.set_page_config(page_title="Rewards — Pay Equity Regression", layout="wide")
-st.markdown(
-    f"<h1 style='color:{NAVY}'>Rewards — Pay Equity Regression Dashboard</h1>",
-    unsafe_allow_html=True
-)
+st.markdown(f"<h1 style='color:{NAVY}'>Rewards — Pay Equity Regression Dashboard</h1>", unsafe_allow_html=True)
 
 # Sidebar controls
 st.sidebar.header("1) Data")
@@ -118,12 +115,10 @@ auto_formula = build_formula_auto(dep_var, indep_vars, categorical_cols)
 formula = st.sidebar.text_area("Regression formula (editable)", value=auto_formula, height=120)
 run_model = st.sidebar.button("Run regression (use 100% data)")
 
-tabs = st.tabs([
-    f"<span style='color:{TEAL}; font-weight:bold'>Data</span>",
-    f"<span style='color:{TEAL}; font-weight:bold'>Model</span>",
-    f"<span style='color:{TEAL}; font-weight:bold'>Results</span>",
-    f"<span style='color:{TEAL}; font-weight:bold'>Insights</span>"
-])
+# -------------------------
+# Tabs
+# -------------------------
+tabs = st.tabs(["Data", "Model", "Results", "Insights"])
 
 # -------------------------
 # DATA TAB
@@ -174,17 +169,34 @@ with tabs[1]:
 with tabs[2]:
     st.header("Interactive Results")
 
-    fig = px.scatter(results_df, x='Predicted', y=dep_var, color_discrete_sequence=[TEAL, NAVY])
+    # Predicted vs Actual
+    fig = px.scatter(results_df, x='Predicted', y=dep_var, color=results_df['EmployeeID'].apply(lambda x: 'Actual'),
+                     labels={'color':'Type'}, color_discrete_sequence=[TEAL])
     fig.add_trace(go.Scatter(x=results_df['Predicted'], y=results_df[dep_var], mode='markers',
-                             marker=dict(color=TEAL), name='Actual'))
+                             marker=dict(color=NAVY), name='Actual'))
     fig.update_layout(title="Predicted vs Actual", xaxis_title="Predicted", yaxis_title="Actual")
     st.plotly_chart(fig, use_container_width=True)
 
-    fig_coef = px.bar(coef[coef['term']!='Intercept'], x='coef', y='term', orientation='h',
-                      error_x=coef['std_err']*2, title="Coefficients (95% CI)", color_discrete_sequence=[TEAL])
+    # Coefficients with 95% CI
+    plot_coef_df = coef[coef['term'] != 'Intercept'].copy()
+    plot_coef_df['error'] = plot_coef_df['std_err'] * 2
+    plot_coef_df['coef'] = plot_coef_df['coef'].astype(float)
+
+    fig_coef = px.bar(
+        plot_coef_df,
+        x='coef',
+        y='term',
+        orientation='h',
+        error_x='error',
+        title="Regression coefficients (95% CI)",
+        color_discrete_sequence=[TEAL],
+        hover_data={'coef':':,.0f', 'error':':,.0f', 't':':.2f', 'p_value':':.3f'}
+    )
     st.plotly_chart(fig_coef, use_container_width=True)
 
+    # Residuals
     fig_resid = px.scatter(results_df, x='Predicted', y='Residual', color_discrete_sequence=[NAVY])
+    fig_resid.update_layout(title="Residuals vs Predicted", xaxis_title="Predicted", yaxis_title="Residual")
     st.plotly_chart(fig_resid, use_container_width=True)
 
 # -------------------------
@@ -199,11 +211,14 @@ with tabs[3]:
     else:
         st.write(sig_coef[['term','coef','p_value']].applymap(lambda x: format_number(x) if isinstance(x,(int,float)) else x))
 
-with st.expander("Recommended actions"):
-    st.markdown("""
-    1. Investigate any significant gaps in protected categories (Gender, Grouping).  
-    2. Review outliers in predicted vs actual (Residuals) for underpaid/overpaid employees.  
-    3. Verify data quality (Salary, JobLevel, ServiceYears, Rating).  
-    4. Adjust policies/pay where justified, document rationale.
-    """)
+    with st.expander("Recommended actions"):
+        st.markdown("""
+        1. Investigate any significant gaps in protected categories (Gender, Grouping).  
+        2. Review outliers in predicted vs actual (Residuals) for underpaid/overpaid employees.  
+        3. Verify data quality (Salary, JobLevel, ServiceYears, Rating).  
+        4. Adjust policies/pay where justified, and document rationale.
+        """)
 
+# Footer
+st.markdown('---')
+st.caption('Built for the Rewards team — Finance Data & Analytics')
