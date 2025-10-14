@@ -199,9 +199,11 @@ with tabs[3]:
     else:
         st.write(sig_coef[['term','coef','p_value']].applymap(lambda x: format_number(x) if isinstance(x,(int,float)) else x))
 
-    with st.expander("Recommended actions"):
-        st.markdown("""
-        1. Investigate any significant gaps in protected categories (Gender, Grouping).  
-        2. Review outliers in predicted vs actual (Residuals) for underpaid/overpaid employees.  
-        3. Verify data quality (Salary, JobLevel, ServiceYears, Rating).  
-        4. Adjust policies/pay where justified, document rationale.
+with st.expander("Recommended actions"):
+    st.markdown("""
+    1. Investigate any significant gaps in protected categories (Gender, Grouping).  
+    2. Review outliers in predicted vs actual (Residuals) for underpaid/overpaid employees.  
+    3. Verify data quality (Salary, JobLevel, ServiceYears, Rating).  
+    4. Adjust policies/pay where justified, document rationale.
+    """)
+
