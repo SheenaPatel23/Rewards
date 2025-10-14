@@ -22,7 +22,7 @@ import plotly.graph_objects as go
 # -------------------------
 # Brand colors (from V.Group)
 # -------------------------
-NAVY = "#002B45"
+LIME = "#68DA6A"
 TEAL = "#00A3E0"
 LIGHT_GREY = "#F5F5F5"
 WHITE = "#FFFFFF"
@@ -87,7 +87,7 @@ def format_number(val):
 # App layout
 # -------------------------
 st.set_page_config(page_title="Rewards — Pay Equity Regression", layout="wide")
-st.markdown(f"<h1 style='color:{NAVY}'>Rewards — Pay Equity Regression Dashboard</h1>", unsafe_allow_html=True)
+st.markdown(f"<h1 style='color:{LIME}'>Rewards — Pay Equity Regression Dashboard</h1>", unsafe_allow_html=True)
 
 # Sidebar controls
 st.sidebar.header("1) Data")
@@ -173,7 +173,7 @@ with tabs[2]:
     fig = px.scatter(results_df, x='Predicted', y=dep_var, color=results_df['EmployeeID'].apply(lambda x: 'Actual'),
                      labels={'color':'Type'}, color_discrete_sequence=[TEAL])
     fig.add_trace(go.Scatter(x=results_df['Predicted'], y=results_df[dep_var], mode='markers',
-                             marker=dict(color=NAVY), name='Actual'))
+                             marker=dict(color=LIME), name='Actual'))
     fig.update_layout(title="Predicted vs Actual", xaxis_title="Predicted", yaxis_title="Actual")
     st.plotly_chart(fig, use_container_width=True)
 
@@ -195,7 +195,7 @@ with tabs[2]:
     st.plotly_chart(fig_coef, use_container_width=True)
 
     # Residuals
-    fig_resid = px.scatter(results_df, x='Predicted', y='Residual', color_discrete_sequence=[NAVY])
+    fig_resid = px.scatter(results_df, x='Predicted', y='Residual', color_discrete_sequence=[LIME])
     fig_resid.update_layout(title="Residuals vs Predicted", xaxis_title="Predicted", yaxis_title="Residual")
     st.plotly_chart(fig_resid, use_container_width=True)
 
