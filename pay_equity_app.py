@@ -120,9 +120,9 @@ TAB_DATA, TAB_MODEL, TAB_RESULTS, TAB_INSIGHTS = st.tabs(["📊 Data", "🧮 Mod
 
 with TAB_DATA:
     st.subheader("Dataset Preview")
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, use_container_width=True.style.format("{:,.0f}"))
     with st.expander("Summary Statistics"):
-        st.dataframe(df.describe(include='all').T)
+        st.dataframe(df.describe(include='all'.style.format("{:,.0f}")).T)
 
 if not run:
     with TAB_MODEL:
@@ -158,7 +158,7 @@ with TAB_MODEL:
     c4.metric(f"Mean {dep_var}", format_num(results[dep_var].mean()))
 
     st.subheader("Coefficients Table")
-    st.dataframe(coef, use_container_width=True)
+    st.dataframe(coef, use_container_width=True.style.format("{:,.0f}"))
 
 # -------------------------------------------------
 # RESULTS TAB
@@ -207,7 +207,7 @@ with TAB_INSIGHTS:
         st.info("No statistically significant predictors at p < 0.05.")
     else:
         st.write("**Significant Predictors**:")
-        st.dataframe(sig, use_container_width=True)
+        st.dataframe(sig, use_container_width=True.style.format("{:,.0f}"))
 
     with st.expander("Recommended Actions"):
         st.markdown("""
