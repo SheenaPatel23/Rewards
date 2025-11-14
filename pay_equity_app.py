@@ -1,8 +1,4 @@
-"""
-app.py - Streamlit Pay Equity Regression (V.Group branded, updated columns)
-Supports columns:
-EmployeeID, Gender, JobLevel, Grouping, Grouping Category, ServiceYears, TenureinRole, Rating, Salary
-"""
+
 
 import base64
 from typing import List, Tuple
